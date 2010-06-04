@@ -1,4 +1,6 @@
-import random, os, sys
+import random
+import os
+import sys
 
 TILE_BLANK = 0
 TILE_DOUBLE_LETTER = 2
@@ -6,6 +8,9 @@ TILE_TRIPLE_LETTER = 3
 TILE_DOUBLE_WORD = 4
 TILE_TRIPLE_WORD = 6
 TILE_START = 7
+
+DIRECTION_HORIZONTAL = 0
+DIRECTION_VERTICAL = 1
 
 tileScores = [[6,0,0,2,0,0,0,6,0,0,0,2,0,0,6],
 [0,4,0,0,0,3,0,0,0,3,0,0,0,4,0],
@@ -32,44 +37,75 @@ letterDistributions = {'a': 9, 'b': 2, 'c': 2, 'd': 4, 'e': 12, 'f': 2, 'g': 3,
 'r': 6, 's': 4, 't': 6, 'u': 4, 'v': 2, 'w': 2, 'x': 1, 'y': 2, 'z': 1}
 
 class Game:
-    __lettersRemaining = None
+    __letterBag = None
     __currentPlayer = None
     __players = None
     __board = None
     __dictionary = None
+    __isNewGame = True
+
+
+    def getIsNewGame(self):
+        """Get the new game status."""
+        return self.__isNewGame
+
+    def setIsNewGame(self, value):
+        """Set the new game status."""
+        self.__isNewGame = value
+
+    isNewGame = property(getIsNewGame, setIsNewGame)
 
 
     def getBoard(self):
+        """Get a reference to the game board."""
         return self.__board
 
     def setBoard(self, value):
+        """Set the game board reference."""
         self.__board = value
 
     board = property(getBoard, setBoard)
 
 
+    def getLetterBag(self):
+        """Get a reference to the letter bag."""
+        return self.__letterBag
+
+    def setLetterBag(self, value):
+        """Set the letter bag reference."""
+        self.__letterBag = value
+
+    letterBag = property(getLetterBag, setLetterBag)
+
+
     def getPlayers(self):
+        """Get a reference to the list of players."""
         return self.__players
 
     def setPlayers(self, value):
+        """Set the list of players reference."""
         self.__players = value
 
     players = property(getPlayers, setPlayers)
 
 
     def getCurrentPlayer(self):
+        """Get the current player index.  Index is 0-based."""
         return self.__currentPlayer
 
     def setCurrentPlayer(self, value):
+        """Set the current player index."""
         self.__currentPlayer = value
 
     currentPlayer = property(getCurrentPlayer, setCurrentPlayer)
 
 
     def getDictionary(self):
+        """Get a reference to the word dictionary."""
         return self.__dictionary
 
     def setdictionary(self, value):
+        """Set the word dictionary reference."""
         self.__dictionary = value
 
     dictionary = property(getDictionary, setdictionary)
@@ -78,22 +114,49 @@ class Game:
     def __init__(self, playerCount):
         """Set up default game state."""
         self.__board = Board()
+        self.__letterBag = LetterBag()
+        self.__players = [Player(self) for i in range(0, playerCount)]
+        self.__currentPlayer = playerCount - 2
+        self.__dictionary = WordDictionary()
 
-        # Copy letter distribution dictionary into letters remaining dictionary
+
+    def nextMove(self):
+        """Select the next player and create a move for that player."""
+
+        # Wrap-around the player index if necessary
+        if self.__currentPlayer == len(self.__players) - 1:
+            self.__currentPlayer = 0
+        else:
+            self.__currentPlayer += 1
+
+        print("Creating move for player " + str(self.__currentPlayer))
+
+        return Move(self, self.__players[self.__currentPlayer])
+
+
+class LetterBag:
+    __letters = None
+
+
+    def __init__(self):
+        # Get a copy of the letter distribution dictionary
         self.__lettersRemaining = {}
 
         for letter in letterDistributions:
             self.__lettersRemaining[letter] = letterDistributions[letter]
 
-        # Create player objects
-        self.__players = [Player(self) for i in range(0, playerCount)]
 
-        self.__currentPlayer = playerCount - 1
+    def getRemainingLetterCount(self):
+        """Get the number of letters left in the bag."""
+        remaining = 0
 
-        self.__dictionary = WordDictionary()
+        for letter in self.__lettersRemaining:
+            remaining += self.__lettersRemaining[letter]
+
+        return remaining
 
 
-    def getRandomLetter(self):
+    def takeRandomLetter(self):
         """Get a random letter from the letter bag and reduce that letter's
         remaining count by 1."""
 
@@ -112,32 +175,9 @@ class Game:
         return letter
 
 
-    def getRemainingLetterCount(self):
-        """Get the number of letters left in the bag."""
-        remaining = 0
-
-        for letter in self.__lettersRemaining:
-            remaining += self.__lettersRemaining[letter]
-
-        return remaining
-
-
-    def newMove(self):
-        """Select the next player and create a move for that player."""
-
-        # Wrap-around the player index if necessary
-        if self.__currentPlayer == len(self.__players) - 1:
-            self.__currentPlayer = 0
-        else:
-            self.__currentPlayer += 1
-
-        print("Creating move for player " + str(self.__currentPlayer))
-
-        return Move(self, self.__players[self.__currentPlayer])
-
-
 class WordDictionary:
     __words = None
+
 
     def __init__(self):
         """"Loads the dictionary file."""
@@ -146,6 +186,7 @@ class WordDictionary:
 
 
     def isWord(self, word):
+        """Check if the supplied word exists in the dictionary."""
         for i in self.__words:
             if i.replace('\n', '') == word:
                 print("Word '" + word + "' is valid")
@@ -160,13 +201,13 @@ class Board:
     __tileScores = None
 
 
-    def get_tiles(self):
+    def getTiles(self):
         return self.__tiles
 
-    def set_tiles(self, value):
+    def setTiles(self, value):
         self.__tiles = value
 
-    tiles = property(get_tiles, set_tiles)
+    tiles = property(getTiles, setTiles)
 
 
     def __init__(self):
@@ -195,6 +236,12 @@ class Board:
 
 
     def print(self):
+        """Print out the current board state in a vaguely user-friendly format.
+        Empty tiles are represented by '.'.  Tiles with letters are represented
+        by the letter.  Tiles with bonuses that have not been claimed are
+        represented by the number of the bonus given in the relevant constants
+        at the top of the script."""
+
         output = ""
 
         for y in range(0, len(self.__tiles)):
@@ -260,6 +307,11 @@ class Board:
         self.__tileScores[y][x] = 0
 
 
+    def getTileScore(self, x, y):
+        """Get the tile score at the specified co-ordinates."""
+        return self.__tileScores[y][x]
+
+
     def getHorizontalWordLength(self, x, y):
         """Get the length of the word starting at x,y."""
 
@@ -304,46 +356,30 @@ class Board:
         return({'x': x, 'y': y})
 
 
-    def getHorizontalWord(self, x, y):
-        """Get the horizontal word containing x,y."""
-
-        # Get the start co-ordinates and length of the word
-        wordStart = self.getHorizontalWordStart(x, y)
-        wordLength = self.getHorizontalWordLength(x, y)
-
-        # Collect the letters of the word
+    def getHorizontalWord(self, x, y, length):
+        """Get the horizontal word starting at x,y of length 'length'."""
         word = ""
-        for i in range(wordStart['x'], wordStart['x'] + wordLength):
+        for i in range(x, x + length):
             word = word + self.getLetter(i, y)
 
         return word
 
 
-    def getVerticalWord(self, x, y):
-        """Get the vertical word containing x,y."""
-
-        # Get the start co-ordinates and length of the word
-        wordStart = self.getVerticalWordStart(x, y)
-        wordLength = self.getVerticalWordLength(x, y)
-
-        # Collect the letters of the word
+    def getVerticalWord(self, x, y, length):
+        """Get the vertical word starting at x,y of length 'length'."""
         word = ""
-        for i in range(wordStart['y'], wordStart['y'] + wordLength):
+        for i in range(y, y + length):
             word = word + self.getLetter(x, i)
 
         return word
 
 
-    def scoreHorizontalWord(self, x, y):
-        """Score the horizontal word containing x,y."""
+    def scoreHorizontalWord(self, x, y, length):
+        """Score the horizontal word starting at x,y of length 'length'."""
 
         # If the length of the word is 1, the score is 0
-        wordLength = self.getHorizontalWordLength(x, y)
-
-        if wordLength == 1:
+        if length == 1:
             return 0
-
-        wordStart = self.getHorizontalWordStart(x, y)
 
         # Score the word
         isDoubleWord = False
@@ -352,7 +388,7 @@ class Board:
         score = 0
 
         # Score individual letters
-        for i in range(wordStart['x'], wordStart['x'] + wordLength):
+        for i in range(x, x + length):
             tileScore = self.scoreTile(i, y)
             score += tileScore['score']
 
@@ -371,16 +407,12 @@ class Board:
         return(score)
 
 
-    def scoreVerticalWord(self, x, y):
-        """Score the vertical word containing x,y."""
+    def scoreVerticalWord(self, x, y, length):
+        """Score the vertical word starting at x,y of length 'length'."""
 
         # If the length of the word is 1, the score is 0
-        wordLength = self.getVerticalWordLength(x, y)
-
-        if wordLength == 1:
+        if length == 1:
             return 0
-
-        wordStart = self.getVerticalWordStart(x, y)
 
         # Score the word
         isDoubleWord = False
@@ -389,7 +421,7 @@ class Board:
         score = 0
 
         # Score individual letters
-        for i in range(wordStart['y'], wordStart['y'] + wordLength):
+        for i in range(y, y + length):
             tileScore = self.scoreTile(x, i)
             score += tileScore['score']
 
@@ -409,6 +441,15 @@ class Board:
 
 
     def scoreTile(self, x, y):
+        """Get the score represented by the tile at the given co-ordinates
+        Should be called after the letter has been placed but before the bonuses
+        have been wiped from the board in order to allow bonuses to be
+        calculated.
+
+        Returns a dictionary containing the keys 'score' (score for the tile),
+        'isDoubleWord' (indicates that the tile contains a double-word score),
+        'isTripleWord' (indicates that the tile contains a triple-word score)
+        and 'isStart' (indicates that the tile is the starting tile)."""
 
         isDoubleWord = False
         isTripleWord = False
@@ -440,13 +481,22 @@ class Player:
     __game = None
 
 
-    def get_tiles(self):
+    def getTiles(self):
         return self.__tiles
 
-    def set_tiles(self, value):
+    def setTiles(self, value):
         self.__tiles = value
 
-    tiles = property(get_tiles, set_tiles)
+    tiles = property(getTiles, setTiles)
+
+
+    def getScore(self):
+        return self.__score
+
+    def setScore(self, value):
+        self.__score = value
+
+    score = property(getScore, setScore)
 
 
     def __init__(self, game):
@@ -455,12 +505,17 @@ class Player:
         self.__game = game
 
         # Populate tiles with random letters
-        self.__tiles = [game.getRandomLetter() for i in range(0, 7)]
+        self.__tiles = [game.letterBag.takeRandomLetter() for i in range(0, 7)]
 
         # TODO: REMOVE THIS
         self.__tiles.extend(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-            'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v'
-            'w', 'x', 'y', 'z'])
+            'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
+            'v', 'w', 'x', 'y', 'z'])
+
+
+    def addScore(self, score):
+        """Adds the supplied score to the player's score."""
+        self.__score += score
 
 
 class Move:
@@ -469,6 +524,16 @@ class Move:
     __score = 0
     __placements = None
     __viableLetters = None
+
+
+    def getScore(self):
+        return self.__score
+
+    def setScore(self, value):
+        self.__score = value
+
+    score = property(getScore, setScore)
+
 
     def __init__(self, game, player):
         self.__game = game
@@ -479,7 +544,12 @@ class Move:
         for i in player.tiles:
             self.__viableLetters.append(i)
 
+
     def placeLetter(self, letter, x, y):
+        """Places a letter from the player's rack into the grid.  The player's
+        rack is not altered until the move is committed.  However, the board
+        is changed and placed into an indeterminate state until either commit()
+        or rollback() is called."""
 
         # Ensure that the letter is in the list of viable letters and, if so,
         # remove it
@@ -497,21 +567,38 @@ class Move:
     def commit(self):
         """Try to commit the move to the game."""
 
-        # Check that the move is valid
-        if not self.validate():
-            self.rollback()
-            return False
+        words = self.collateWords()
 
-        # Calculate the score of the move
-        self.calculateScore()
+        # Check that the move is valid
+        try: self.validate(words)
+        except ValueError:
+            self.rollback()
+            raise
+
+        # Calculate the score of the move and add it to the player's score
+        self.__score = self.getScore(words)
+        self.__player.addScore(self.__score)
 
         self.clearTileScores()
+        self.updateRack()
+
+        # Remember that we are no longer on the first move
+        self.__game.isNewGame = False
 
 
     def rollback(self):
-        """Restores the grid to its previous state."""
+        """Restores the grid to its previous state by removing all letters
+        placed in this move.  Restores the viable letters from the
+        placements."""
         for i in self.__placements:
             self.__game.board.clearLetter(i['x'], i['y'])
+            self.__viableLetters.append(i['letter'])
+
+
+    def updateRack(self):
+        """Updates the player's rack by removing all placed letters."""
+        for i in self.__placements:
+            self.__player.tiles.remove(i['letter'])
 
 
     def clearTileScores(self):
@@ -521,85 +608,157 @@ class Move:
             self.__game.board.clearTileScore(i['x'], i['y'])
 
 
-    def validate(self):
-        direction = self.getPlacementDirection()
+    def collateWords(self):
+        """Collate a list of all words created by this move.
 
-        if direction == 0:
+        Returns a dictionary containing the words as keys and a second
+        dictionary as each value.
 
-            # Validate the horizontal word
-            word = self.__game.board.getHorizontalWord(self.__placements[0]['x'], self.__placements[0]['y'])
+        The second dictionary contains the keys 'length' (the length of the
+        word), 'x' (the x co-ordinate of the start of the word), 'y' (the y
+        co-ordinate of the start of the word) and 'direction' (either
+        DIRECTION_HORIZONTAL or DIRECTION_VERTICAL)."""
+        words = {}
 
+        for i in self.__placements:
+
+            # Get horizontal word from this placement
+            coords = self.__game.board.getHorizontalWordStart(i['x'], i['y'])
+            x = coords['x']
+            y = coords['y']
+
+            length = self.__game.board.getHorizontalWordLength(x, y)
+            word = self.__game.board.getHorizontalWord(x, y, length)
+
+            if length > 1:
+                words[word] = {'length': length, 'x': x, 'y': y,
+                    'direction': DIRECTION_HORIZONTAL}
+
+            # Get vertical word from this placement
+            coords = self.__game.board.getVerticalWordStart(i['x'], i['y'])
+            x = coords['x']
+            y = coords['y']
+
+            length = self.__game.board.getVerticalWordLength(x, y)
+            word = self.__game.board.getVerticalWord(x, y, length)
+
+            if length > 1:
+                words[word] = {'length': length, 'x': x, 'y': y,
+                    'direction': DIRECTION_VERTICAL}
+
+        return words
+
+
+    def validate(self, words):
+        """Ensure that all words created by this move are valid."""
+        self.validatePlacements()
+
+        for word in words:
             if not self.__game.dictionary.isWord(word):
-                return False
-
-            # Validate the vertical words adjacent to the horizontal word
-            for i in self.__placements:
-                word = self.__game.board.getVerticalWord(i['x'], i['y'])
-                if len(word) > 1:
-                    if not self.__game.dictionary.isWord(word):
-                         return False
-
-        else:
-            # Validate the vertical word
-            word = self.__game.board.getVerticalWord(self.__placements[0]['x'], self.__placements[0]['y'])
-
-            if not self.__game.dictionary.isWord(word):
-                return False
-
-            # Validate the horizontal words adjacent to the vertical word
-            for i in self.__placements:
-                word = self.__game.board.getHorizontalWord(i['x'], i['y'])
-                if len(word) > 1:
-                    if not self.__game.dictionary.isWord(word):
-                        return False
+                raise ValueError("Word '" + word + "' is not valid.")
 
         return True
 
 
-    def calculateScore(self):
-        direction = self.getPlacementDirection()
-        score = 0
+    def validatePlacements(self):
+        """Check that all placements are in a row, are contiguous, and are
+        somehow connected to the existing body of tiles.
+        """
 
-        if direction == 0:
+        # Special case for single placements
+        if len(self.__placements) == 1:
 
-            # Score horizontal word
-            score += self.__game.board.scoreHorizontalWord(self.__placements[0]['x'], self.__placements[0]['y'])
+            # Check that tile connects to a populated tile on at least one side
+            x = self.__placements[0]['x']
+            y = self.__placements[0]['y']
 
-            # Score the vertical words adjacent to the horizontal word
+            if x > 0 and self.__game.board.getLetter(x - 1, y) != ' ':
+                return
+            elif x < len(self.__game.board.tiles[y]) and self.__game.board.getLetter(x + 1, y) != ' ':
+                return
+            elif y > 1 and self.__game.board.getLetter(x, y - 1) != ' ':
+                return
+            elif y < len(self.__game.board.tiles) and self.__game.board.getLetter(x, y + 1) != ' ':
+                return
+
+            raise ValueError("Placements do not connect with the existing letters.")
+
+        # If this is the first move, ensure that tiles cross the start point
+        if self.__game.isNewGame:
+            startTileCheck = False
             for i in self.__placements:
-                score += self.__game.board.scoreVerticalWord(i['x'], i['y'])
-        else:
+                if self.__game.board.getTileScore(i['x'], i['y']) == TILE_START:
+                    startTileCheck = True
+                    break
+            if not startTileCheck:
+                raise ValueError("Tiles not placed across start tile.")
 
-            # Score vertical word
-            score += self.__game.board.scoreVerticalWord(self.__placements[0]['x'], self.__placements[0]['y'])
-
-            # Score the horizontal words adjacent to the vertical word
-            for i in self.__placements:
-                score += self.__game.board.scoreHorizontalWord(i['x'], i['y'])
-
-        print(score)
-
-
-    def getPlacementDirection(self):
-        """0 indicates horizontal; 1 indicates vertical."""
-
-        # If all letters are in a line, then either the x or y co-ords of one
-        # placement multiplied by the number of placements will equal the total
-        # x or y co-ordinate for the entire move
+        # Check if placements are on a straight line
         xTotal = 0
         yTotal = 0
+        direction = DIRECTION_HORIZONTAL
+
         for i in self.__placements:
             xTotal += i['x']
             yTotal += i['y']
 
-        if self.__placements[0]['x'] * len(self.__placements) == xTotal:
-            return 1
-        elif self.__placements[0]['y'] * len(self.__placements) == yTotal:
-            return 0
+        if xTotal == self.__placements[0]['x'] * len(self.__placements):
+            direction = DIRECTION_VERTICAL
+        elif yTotal == self.__placements[0]['y'] * len(self.__placements):
+            direction = DIRECTION_HORIZONTAL
+        else:
+            raise ValueError("Tiles not placed in straight line.")
 
-        # No match means letters are not lined up
-        raise Exception("Letters are out of alignment.  Move is invalid.")
+        # Check that there are no gaps between the tiles
+        sortedPlacements = []
 
+        if direction == DIRECTION_HORIZONTAL:
+
+            # Sort the placements so that we know the left and right edges of
+            # the word.  Scan for gaps in any tiles between
+            y = self.__placements[0]['y']
+
+            for i in self.__placements:
+                sortedPlacements.append(i['x'])
+
+            sortedPlacements.sort()
+
+            for i in range(sortedPlacements[0], sortedPlacements[len(sortedPlacements) - 1]):
+                if self.__game.board.getLetter(i, y) == ' ':
+                    raise ValueError("Placed word contains gaps.")
+        else:
+
+            # Sort the placements so that we know the top and bottom edges of
+            # the word.  Scan for gaps in any tiles between
+            x = self.__placements[0]['x']
+            for i in self.__placements:
+                sortedPlacements.append(i['y'])
+
+            sortedPlacements.sort()
+
+            for i in range(sortedPlacements[0], sortedPlacements[len(sortedPlacements) - 1]):
+                if self.__game.board.getLetter(x, i) == ' ':
+                    raise ValueError("Placed word contains gaps.")
+
+
+    def getScore(self, words):
+        """Calculate the total score represented by the words dictionary."""
+        score = 0
+
+        for word in words:
+            if words[word]['direction'] == DIRECTION_HORIZONTAL:
+
+                # Score horizontal word
+                score += self.__game.board.scoreHorizontalWord(words[word]['x'], words[word]['y'], words[word]['length'])
+            else:
+
+                # Score vertical word
+                score += self.__game.board.scoreVerticalWord(words[word]['x'], words[word]['y'], words[word]['length'])
+
+        return(score)
+
+
+# Test match
 game = Game(2)
 
 
@@ -614,32 +773,53 @@ print(game.players[0].tiles)
 print("Player 2:")
 print(game.players[1].tiles)
 
-print("Player " + str(game.currentPlayer + 1) + " places 'bin'")
-move = game.newMove()
-move.placeLetter('b', 2, 1)
-move.placeLetter('i', 2, 2)
-move.placeLetter('n', 2, 3)
+
+move = game.nextMove()
+print("Player " + str(game.currentPlayer) + " places 'bin'")
+move.placeLetter('b', 7, 7)
+move.placeLetter('i', 7, 8)
+move.placeLetter('n', 7, 9)
 move.commit()
 
 print("Board state:")
 game.board.print()
 
 
-print("Player " + str(game.currentPlayer + 1) + " places 'chip'")
-move = game.newMove()
-move.placeLetter('c', 0, 2)
-move.placeLetter('h', 1, 2)
-move.placeLetter('p', 3, 2)
+move = game.nextMove()
+print("Player " + str(game.currentPlayer) + " places 'chip'")
+move.placeLetter('c', 5, 8)
+move.placeLetter('h', 6, 8)
+move.placeLetter('p', 8, 8)
 move.commit()
+print("Score: " + str(move.score))
 
 print("Board state:")
 game.board.print()
 
 
-print("Player " + str(game.currentPlayer + 1) + " places 'chips'")
-move = game.newMove()
-move.placeLetter('s', 4, 2)
+move = game.nextMove()
+print("Player " + str(game.currentPlayer) + " places 'chips'")
+move.placeLetter('s', 9, 8)
 move.commit()
+print("Score: " + str(move.score))
 
 print("Board state:")
 game.board.print()
+
+
+move = game.nextMove()
+print("Player " + str(game.currentPlayer) + " places 'bound'")
+move.placeLetter('o', 8, 7)
+move.placeLetter('u', 9, 7)
+move.placeLetter('n', 10, 7)
+move.placeLetter('d', 11, 7)
+move.commit()
+print("Score: " + str(move.score))
+
+print("Board state:")
+game.board.print()
+
+
+print("Scores:")
+for i in range(0, len(game.players)):
+    print("Player " + str(i) + ": " + str(game.players[i].score))
