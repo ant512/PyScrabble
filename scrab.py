@@ -237,10 +237,12 @@ class Board:
 
     def print(self):
         """Print out the current board state in a vaguely user-friendly format.
+
         Empty tiles are represented by '.'.  Tiles with letters are represented
         by the letter.  Tiles with bonuses that have not been claimed are
         represented by the number of the bonus given in the relevant constants
-        at the top of the script."""
+        at the top of the script.
+        """
 
         output = ""
 
@@ -441,7 +443,8 @@ class Board:
 
 
     def scoreTile(self, x, y):
-        """Get the score represented by the tile at the given co-ordinates
+        """Get the score represented by the tile at the given co-ordinates.
+
         Should be called after the letter has been placed but before the bonuses
         have been wiped from the board in order to allow bonuses to be
         calculated.
@@ -449,7 +452,8 @@ class Board:
         Returns a dictionary containing the keys 'score' (score for the tile),
         'isDoubleWord' (indicates that the tile contains a double-word score),
         'isTripleWord' (indicates that the tile contains a triple-word score)
-        and 'isStart' (indicates that the tile is the starting tile)."""
+        and 'isStart' (indicates that the tile is the starting tile).
+        """
 
         isDoubleWord = False
         isTripleWord = False
@@ -546,10 +550,12 @@ class Move:
 
 
     def placeLetter(self, letter, x, y):
-        """Places a letter from the player's rack into the grid.  The player's
-        rack is not altered until the move is committed.  However, the board
-        is changed and placed into an indeterminate state until either commit()
-        or rollback() is called."""
+        """Places a letter from the player's rack into the grid.
+
+        The player's rack is not altered until the move is committed.  However,
+        the board is changed and placed into an indeterminate state until either
+        commit() or rollback() is called.
+        """
 
         # Ensure that the letter is in the list of viable letters and, if so,
         # remove it
@@ -588,8 +594,11 @@ class Move:
 
     def rollback(self):
         """Restores the grid to its previous state by removing all letters
-        placed in this move.  Restores the viable letters from the
-        placements."""
+        placed in this move.
+
+        Restores the viable letters from the placements.
+        """
+
         for i in self.__placements:
             self.__game.board.clearLetter(i['x'], i['y'])
             self.__viableLetters.append(i['letter'])
@@ -617,7 +626,9 @@ class Move:
         The second dictionary contains the keys 'length' (the length of the
         word), 'x' (the x co-ordinate of the start of the word), 'y' (the y
         co-ordinate of the start of the word) and 'direction' (either
-        DIRECTION_HORIZONTAL or DIRECTION_VERTICAL)."""
+        DIRECTION_HORIZONTAL or DIRECTION_VERTICAL).
+        """
+
         words = {}
 
         for i in self.__placements:
@@ -662,8 +673,7 @@ class Move:
 
     def validatePlacements(self):
         """Check that all placements are in a row, are contiguous, and are
-        somehow connected to the existing body of tiles.
-        """
+        somehow connected to the existing body of tiles."""
 
         # Special case for single placements
         if len(self.__placements) == 1:
