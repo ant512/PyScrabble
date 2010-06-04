@@ -740,6 +740,81 @@ class Move:
                 if self.__game.board.getLetter(x, i) == ' ':
                     raise ValueError("Placed word contains gaps.")
 
+        # Stop processing if this is the first move
+        if self.__game.isNewGame:
+            return
+
+        # Check that the placed tiles connect to the existing tiles
+        placementIndex = 0
+        connected = False
+
+        if direction == DIRECTION_HORIZONTAL:
+            y = self.__placements[0]['y']
+
+            for x in sortedPlacements:
+                if y > 0 and self.__game.board.getLetter(x, y - 1) != ' ':
+                    # There is a connection to a letter above the word
+                    connected = True
+                    break
+                elif y < len(self.__game.board.tiles) - 1 and self.__game.board.getLetter(x, y + 1) != ' ':
+                    # There is a connection to a letter below the word
+                    connected = True
+                    break
+
+                if x > 0 and self.__game.board.getLetter(x - 1, y) != ' ':
+                    # There is a connection on the left of this letter
+                    if placementIndex == 0 or sortedPlacements[placementIndex - 1] + 1 != x:
+                        # The connection on the left is not the result of a
+                        # connection within the new placements
+                        connected = True
+                        break
+
+                if x < len(self.__game.board.tiles[y]) - 1 and self.__game.board.getLetter(x + 1, y) != ' ':
+                    # There is a connection of the right of this letter
+                    if placementIndex == len(sortedPlacements) - 1 or sortedPlacements[placementIndex + 1] - 1 != x:
+                        # The connection on the right is not the result of a
+                        # connection within the new placements
+                        connected = True
+                        break
+
+                placementIndex += 1
+
+            if not connected:
+                raise ValueError("Placements do not connect with the existing letters.")
+        else:
+            x = self.__placements[0]['x']
+
+            for y in sortedPlacements:
+                if x > 0 and self.__game.board.getLetter(x - 1, y) != ' ':
+                    # There is a connection to a letter on the left of the word
+                    connected = True
+                    break
+                elif x < len(self.__game.board.tiles[y]) - 1 and self.__game.board.getLetter(x + 1, y) != ' ':
+                    # There is a connection to a letter on the right of the word
+                    connected = True
+                    break
+
+                if y > 0 and self.__game.board.getLetter(x, y - 1) != ' ':
+                    # There is a connection above this letter
+                    if placementIndex == 0 or sortedPlacements[placementIndex - 1] + 1 != y:
+                        # The connection above is not the result of a connection
+                        # within the new placements
+                        connected = True
+                        break
+
+                if y < len(self.__game.board.tiles) - 1 and self.__game.board.getLetter(x, y + 1) != ' ':
+                    # There is a connection below this letter
+                    if placementIndex == len(sortedPlacements) - 1 or sortedPlacements[placementIndex + 1] - 1 != y:
+                        # The connection below is not the result of a connection
+                        # within the new placements
+                        connected = True
+                        break
+
+                placementIndex += 1
+
+            if not connected:
+                raise ValueError("Placements do not connect with the existing letters.")
+
 
     def getScore(self, words):
         """Calculate the total score represented by the words dictionary."""
@@ -780,6 +855,7 @@ move.placeLetter('b', 7, 7)
 move.placeLetter('i', 7, 8)
 move.placeLetter('n', 7, 9)
 move.commit()
+print("Score: " + str(move.score))
 
 print("Board state:")
 game.board.print()
